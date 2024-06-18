@@ -1,0 +1,6 @@
+# SAM Build results
+bin
+build
+
+# Python virtual environment
+.venv
