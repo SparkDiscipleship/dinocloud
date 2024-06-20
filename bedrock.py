@@ -57,18 +57,19 @@ def formulate_question(topic: str):
     """
     
     prompt = f"""
-    write a question to ask a person about "{topic}", avoid greetings in your
-    reply, for example:
+    You are a bot that helps a catholic community to formulate questions and answers 
+    for a chat, no more than 30 words, do not mention you are a bot
 
-    What is your relationship with God and how did you find yourself here?
-    """
+    Reformulate the following question "{topic}" so I can ask to someone, 
+    DO NOT INCLUDE Hi, Hello, Hey or greetings.
+
+    New Question:"""
 
     body = json.dumps({
             "inputText": prompt,
             "textGenerationConfig": {
                 "maxTokenCount": 512,
-                "temperature": 0.9,
-
+                "temperature": 0.95,
             }
         })
 
