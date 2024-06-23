@@ -1,7 +1,10 @@
 # SAM Build results
 bin
 build
+.aws-sam
+
 
 # Python virtual environment
 .venv
 __pycache__
+

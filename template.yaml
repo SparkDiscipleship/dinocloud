@@ -1,30 +1,39 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Transform: AWS::Serverless-2016-10-31
-Description: >
-  cost_savings_automation
-  Sample SAM Template for cost_savings_automation
+Description: SAM Application for Spark Chatbot
 Globals:
   Function:
     Timeout: 150
     MemorySize: 128
 
 Resources:
-  SparkMentorBotFunction:
+
+  SparkChatbotSlotsProcessorLambda:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: spark-mentor-bot
-      Handler: main.handler
+      FunctionName: spark-chatbot-slots-processor
+      Description: Spark Mentor Bot Lambda for process messages
+      Handler: app.lambda_handler
       Runtime: python3.12
-      CodeUri: ./build/function.zip
+      CodeUri: app/
       Role: !GetAtt SparkMentorBotRole.Arn
       Architectures:
         - arm64
-      Description: Spark Mentor Bot Lambda for process messages
-      
+
+  SparkChatbotLambdaLayer:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      LayerName: spark-chatbot
+      ContentUri: dependencies/
+      CompatibleRuntimes:
+        - python3.12
+    Metadata:
+      BuildMethod: python3.12
+
   SparkMentorBotRole:
     Type: AWS::IAM::Role
     Properties:
-      RoleName: spark-mentor-bot-role
+      RoleName: spark-chatbot-slots-processor
       AssumeRolePolicyDocument:
         Version: "2012-10-17"
         Statement:
