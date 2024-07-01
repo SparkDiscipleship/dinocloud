@@ -1,36 +1,24 @@
 import boto3
 import json
+from typing import List
 
 client = boto3.client('bedrock-runtime')
-model_id = 'amazon.titan-text-express-v1'
+model_id = 'anthropic.claude-v2:1'
 
-def analyze_god_relationship(input: str):
-    """
-    Uses amazon bedrock to analyze the statement about My relationship with God
-    returns:
-    - solid
-    - improve required
-    """
+def topic_transition(input_transcript: str, next_topic: str):
 
+    prompt = f"""Based on a user conversation. \
+        Reply gently to what the user said and reformulate a question about "{next_topic}" that I can use to continue with the \
+        conversation. Do NOT include more than 30 words. \
+              
+        User said: {input_transcript}"""
 
-    prompt = f"""
-    {input}
-
-    Analyze the above statement and reply me only "solid", for 
-    the analysis consider the following:
-
-    - solid: If the statement refers to catholic religios practices like 
-    pray continually, always go to church, put God above all things, look 
-    for the good for your neighbor, among other religious practices.
-    Otherwise reply neutral
-    """
 
     body = json.dumps({
-            "inputText": prompt,
-            "textGenerationConfig": {
-                "maxTokenCount": 512,
-                "temperature": 0.7,
-            }
+            "prompt": f"\n\nHuman: {prompt}\n\nAssistant:",
+            "max_tokens_to_sample": 300,
+            "temperature": 0.1,
+            "top_p": 0.9,
         })
 
     output = client.invoke_model(
@@ -39,37 +27,41 @@ def analyze_god_relationship(input: str):
     )
 
     response_body = json.loads(output.get('body').read())
-    print(response_body)
+    answer = response_body.get('completion')
 
-    answer = response_body['results'][0]['outputText']
-
-    if 'solid' in answer:
-        return 'solid'
-    else:
-        return 'improve required'
+    return answer.strip()
 
 
-def formulate_question(topic: str):
-    """
-    Formulate a question about the {topic}
-    return:
-    - a formulated question ready to be used in the Lex prompt 
-    """
+def sentiment_analysis(input_transcript: str, topic: str, redflags: List[str]):
+
+    formated_redflags = ', '.join(redflags)
+
+    # prompt = f"""Consider the sentiment is bad if you identify redflags such as {formated_redflags}.
+
+    # Analyze the following text and reply me if the sentiment is good, bad or neutral about {topic}, just reply me the result:
     
-    prompt = f"""
-    You are a bot that helps a catholic community to formulate questions and answers 
-    for a chat, no more than 30 words, do not mention you are a bot
+    # {input_transcript}
 
-    Reformulate the following question "{topic}" so I can ask to someone, 
-    DO NOT INCLUDE Hi, Hello, Hey or greetings.
+    # Result:"""
 
-    New Question:"""
+    prompt = f"""You are a bot that detects a set of pre-defined sentiments
+    of a human text, your response as bot can be "true" if the pre-defined 
+    sentiments are found in the human text, "neutral" if the human text does 
+    not talks about a topic
+
+    Analyze the following text and reply me if the sentiment is good, bad or neutral about {topic}, just reply me the result:
+    
+    {input_transcript}
+
+    Result:"""
+
 
     body = json.dumps({
             "inputText": prompt,
             "textGenerationConfig": {
                 "maxTokenCount": 512,
-                "temperature": 0.95,
+                "temperature": 0.2,
+                "topP": 0.2,
             }
         })
 
@@ -79,8 +71,6 @@ def formulate_question(topic: str):
     )
 
     response_body = json.loads(output.get('body').read())
-    print(response_body)
-
     answer = response_body['results'][0]['outputText']
 
     return answer

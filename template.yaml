@@ -13,22 +13,12 @@ Resources:
     Properties:
       FunctionName: spark-chatbot-slots-processor
       Description: Spark Mentor Bot Lambda for process messages
-      Handler: app.lambda_handler
+      Handler: main.handler
       Runtime: python3.12
       CodeUri: app/
       Role: !GetAtt SparkMentorBotRole.Arn
       Architectures:
         - arm64
-
-  SparkChatbotLambdaLayer:
-    Type: AWS::Serverless::LayerVersion
-    Properties:
-      LayerName: spark-chatbot
-      ContentUri: dependencies/
-      CompatibleRuntimes:
-        - python3.12
-    Metadata:
-      BuildMethod: python3.12
 
   SparkMentorBotRole:
     Type: AWS::IAM::Role

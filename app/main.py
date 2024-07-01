@@ -1,4 +1,23 @@
-from bedrock import analyze_god_relationship, formulate_question
+from bedrock import topic_transition, sentiment_analysis
+
+elicitslot_response =  {
+    'sessionState': {
+        'dialogAction': {
+            'slotToElicit': None,
+            'type': 'ElicitSlot'
+        },
+        'intent': {
+            'name': None,
+            'slots': None
+        }
+    },
+    'messages': [
+        {
+            'contentType': 'PlainText',
+            'content': None
+        }
+    ]
+}
 
 def handler(event, context):
 
@@ -32,14 +51,122 @@ def handler(event, context):
 
     if event['invocationSource'] == 'DialogCodeHook':
 
-        if not slots['GodRelationship']:
+        if not slots['MentalCapacity']:
 
-            # If the GodRelationship Slot is not fullfiled then ask for it
-            message = formulate_question("How is your relationship with God and how did you find yourself there?")            
-            response = {
+            message = topic_transition(
+                input_transcript="My name is " + transcript,
+                next_topic="mental capacity and ask if He/She have gone through a tragedy or hardtime within the last 3 months?"
+            )
+
+            response =  {
+                    'sessionState': {
+                        'dialogAction': {
+                            'slotToElicit': 'MentalCapacity',
+                            'type': 'ElicitSlot'
+                        },
+                        'intent': {
+                            'name': intent,
+                            'slots': slots
+                        }
+                    },
+                    'messages': [
+                        {
+                            'contentType': 'PlainText',
+                            'content': message.replace('"', '')
+                        }
+                    ]
+                }
+
+            if attempt != 'Initial':
+                answer = sentiment_analysis(
+                    input_transcript=transcript,
+                    topic="mental capacity",
+                    redflags=[
+                        "He/She is shocked about what He/She experienced",
+                        "He/She is trying to cope with the event.",
+                    ]                    
+                )
+
+                print("Answer provided by sentiment analysis: "+answer)
+
+                if 'neutral' in answer.lower():
+                    mental_capacity = 'neutral'
+                elif 'good' in answer.lower():
+                    mental_capacity = 'good'
+                else:
+                    mental_capacity = 'bad'
+
+                slots['MentalCapacity'] = {
+                    'value': {
+                        "originalValue": transcript,
+                        "interpretedValue": mental_capacity,
+                        "resolvedValues": [mental_capacity]
+                    }
+                }
+
+                message = topic_transition(
+                            input_transcript=transcript,
+                            next_topic="emotional capcity and ask if He/She is helping to carry burdens or shoulder for people in His/Her life right now? If so, how do they make He/Shee feel?"
+                        )
+
+                response =  {
+                    'sessionState': {
+                        'dialogAction': {
+                            'slotToElicit': 'EmotionalCapacity',
+                            'type': 'ElicitSlot'
+                        },
+                        'intent': {
+                            'name': intent,
+                            'slots': slots
+                        }
+                    },
+                    'messages': [
+                        {
+                            'contentType': 'PlainText',
+                            'content': message.replace('"', '')
+                        }
+                    ]
+                }
+
+        elif not slots['EmotionalCapacity'] and attempt != 'Initial':
+
+            answer = sentiment_analysis(
+                    input_transcript=transcript,
+                    topic="emotional capacity",
+                    redflags=[
+                        "He/She is or seems to be burned out",
+                        "He/She is or seems to be exhausted",
+                        "He/She is or seems to be tired",
+                        "He/She can't take this anymore"
+                    ]             
+                )
+
+            print("Answer provided by sentiment analysis: "+answer)
+
+            if 'neutral' in answer.lower():
+                mental_capacity = 'neutral'
+            elif 'good' in answer.lower():
+                mental_capacity = 'good'
+            else:
+                mental_capacity = 'bad'
+
+            slots['EmotionalCapacity'] = {
+                'value': {
+                    "originalValue": transcript,
+                    "interpretedValue": mental_capacity,
+                    "resolvedValues": [mental_capacity]
+                }
+            }
+
+            message = topic_transition(
+                input_transcript=transcript,
+                next_topic="self-awareness and ask if He/She recognize His/Her flaws/tendencies/triggers and how that could impact someone's ability to trust me"
+            )
+
+            response =  {
                 'sessionState': {
                     'dialogAction': {
-                        'slotToElicit': 'GodRelationship',
+                        'slotToElicit': 'SelfAwareness',
                         'type': 'ElicitSlot'
                     },
                     'intent': {
@@ -54,138 +181,6 @@ def handler(event, context):
                     }
                 ]
             }
-
-            # If the proposed next stage attempt is not the Initial then analyze the user input
-            if attempt != 'Initial':
-                # Check if user input shows a solid or need to improve about GodRelationship
-                god_relationship = analyze_god_relationship(transcript)
-                slots['GodRelationship'] = {
-                    'value': {
-                        "originalValue": transcript,
-                        "interpretedValue": god_relationship,
-                        "resolvedValues": [god_relationship]
-                    }
-                }
-
-                message = formulate_question("Do you feel ready to be a disciple-maker?")
-
-                response = {
-                    'sessionState': {
-                        'dialogAction': {
-                            'slotToElicit': 'DiscipleshipAttitude', # Move to the next Slot
-                            'type': 'ElicitSlot'
-                        },
-                        'intent': {
-                            'name': intent,
-                            'slots': slots
-                        }
-                    },
-                    'messages': [
-                        {
-                            'contentType': 'PlainText',
-                            'content': message.replace('"', '')
-                        }
-                    ]
-                }
-
-        elif not slots['DiscipleshipAttitude']:
-
-            # If the proposed next stage attempt is not the Initial then analyze the user input
-            if attempt != 'Initial':
-                # Check if user input shows a solid or need to improve about GodRelationship
-                god_relationship = analyze_god_relationship(transcript)
-                slots['DiscipleshipAttitude'] = {
-                    'value': {
-                        "originalValue": transcript,
-                        "interpretedValue": god_relationship,
-                        "resolvedValues": [god_relationship]
-                    }
-                }
-
-                message = formulate_question("Tell me a time in your life where you experienced something really hard.")
-
-                response = {
-                    'sessionState': {
-                        'dialogAction': {
-                            'slotToElicit': 'GodInHardTime', # Move to the next Slot
-                            'type': 'ElicitSlot'
-                        },
-                        'intent': {
-                            'name': intent,
-                            'slots': slots
-                        }
-                    },
-                    'messages': [
-                        {
-                            'contentType': 'PlainText',
-                            'content': message.replace('"', '')
-                        }
-                    ]
-                }
-
-        elif not slots['GodInHardTime']:
-
-            # If the proposed next stage attempt is not the Initial then analyze the user input
-            if attempt != 'Initial':
-                # Check if user input shows a solid or need to improve about GodRelationship
-                god_relationship = analyze_god_relationship(transcript)
-                slots['GodInHardTime'] = {
-                    'value': {
-                        "originalValue": transcript,
-                        "interpretedValue": god_relationship,
-                        "resolvedValues": [god_relationship]
-                    }
-                }
-                message = formulate_question("As you look back on this experience, do you see God's hand in it now?")    
-                response = {
-                    'sessionState': {
-                        'dialogAction': {
-                            'slotToElicit': 'GodPresence', # Move to the next Slot
-                            'type': 'ElicitSlot'
-                        },
-                        'intent': {
-                            'name': intent,
-                            'slots': slots
-                        }
-                    },
-                    'messages': [
-                        {
-                            'contentType': 'PlainText',
-                            'content': message.replace('"', '')
-                        }
-                    ]
-                }
-
-        elif not slots['GodPresence']:
-            # If the proposed next stage attempt is not the Initial then analyze the user input
-            if attempt != 'Initial':
-                # Check if user input shows a solid or need to improve about GodRelationship
-                god_relationship = analyze_god_relationship(transcript)
-                slots['GodPresence'] = {
-                    'value': {
-                        "originalValue": transcript,
-                        "interpretedValue": god_relationship,
-                        "resolvedValues": [god_relationship]
-                    }
-                }
-
-                response = {
-                    'sessionState': {
-                        'dialogAction': {
-                            'type': 'ConfirmIntent'
-                        },
-                        'intent': {
-                            'name': intent,
-                            'slots': slots
-                        }
-                    },
-                    'messages': [
-                        {
-                            'contentType': 'PlainText',
-                            'content': "Thanks for all your answers, is there any final argument do you want to mention?"
-                        }
-                    ]
-                }
         
         else:
             response = {
@@ -202,3 +197,4 @@ def handler(event, context):
 
     print(f"response: {response}")
     return response
+

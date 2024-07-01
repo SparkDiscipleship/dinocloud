@@ -2,11 +2,8 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_aws import ChatBedrock
 from typing import List
 
-chat = ChatBedrock(
-    model_id='amazon.titan-text-express-v1',
-    model_kwargs={'temperature': 0.1, 'topP': 0.1}
-)
 
+model_id = 'anthropic.claude-3-haiku-20240307-v1:0'
 
 def topic_transition(input_transcript: str, next_topic: str):
     """A topic transition function that understand what the user said and returns
@@ -16,14 +13,23 @@ def topic_transition(input_transcript: str, next_topic: str):
     topic: this is the topic information about the next question to formulate.
     """
 
+    chat = ChatBedrock(
+        model_id=model_id,
+        model_kwargs =  { 
+            "max_tokens": 256,
+            "temperature": 0.5,
+            "top_k": 250,
+            "stop_sequences": ["\n\nHuman"],
+        })
+
     messages = [
         SystemMessage(
-            content="""You are a helpful assistant that helps with a survey, you respond 
-            gently to what a user says and then you add a formulated friendly question 
-            to ask them about the next topic"""
+            content=f"""You are helpful chatbot, formulate a gently reply to \
+            what the user says and reformulate a enriched question about "{next_topic}" \
+            that can asked to the user. Do NOT start with a greeting"""
         ),
         HumanMessage(
-            content=f"The user said '{input_transcript}' and the next topic is '{next_topic}'"
+            content=input_transcript
         ),
     ]
 
@@ -40,27 +46,27 @@ def sentiment_analysis(input_transcript: str, topic:str, redflags: List[str]):
 
     redflags_parsed = "\n".join(redflags)
 
+    chat = ChatBedrock(
+        model_id=model_id,
+        model_kwargs =  { 
+            "max_tokens": 512,
+            "temperature": 0.0,
+            "top_k": 250,
+            "stop_sequences": ["\n\nHuman"],
+        })
+
     messages = [
+        SystemMessage(
+            content=f"""You are a sentiment analysis AI that detects pre-defined \
+            sentiments considered redflags of what the user says. \
+            The Redflags are: {redflags_parsed}. \
+            Return "bad" if you found the redflags. \
+            Return "neutral" if the user said nothing related to the topic "{topic}". \
+            Return "good" if the user is positive or optimistic about the topic "{topic}". \
+            You can only reply bad, neutral or good"""
+        ),
         HumanMessage(
-            content=f"""
-            The following is a text from a user when asked about 
-            the topic "{topic}":
-
-            "{input_transcript}"
-
-            Respond if the sentiment of the text is one of the 
-            following:
-
-            {redflags_parsed}
-
-            Otherwise, return only one of the following depending 
-            on the description:
-
-            good: if the text talks a lot of the topic {topic}.
-
-            neutral: if the text is not enough good or talks about 
-            the {topic}
-            """
+            content=input_transcript
         )
     ]
 
