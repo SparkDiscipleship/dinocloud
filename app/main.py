@@ -1,4 +1,4 @@
-from bedrock import topic_transition, sentiment_analysis
+from bedrock_langchain import topic_transition, sentiment_analysis
 
 elicitslot_response =  {
     'sessionState': {
@@ -19,6 +19,34 @@ elicitslot_response =  {
     ]
 }
 
+def prepare_topic_tranistion(transcript: str, next_topic: str, intent, slots):
+
+    message = topic_transition(
+        input_transcript=transcript,
+        next_topic=next_topic
+    )
+
+    response =  {
+            'sessionState': {
+                'dialogAction': {
+                    'slotToElicit': 'MentalCapacity',
+                    'type': 'ElicitSlot'
+                },
+                'intent': {
+                    'name': intent,
+                    'slots': slots
+                }
+            },
+            'messages': [
+                {
+                    'contentType': 'PlainText',
+                    'content': message.replace('"', '')
+                }
+            ]
+        }
+
+    return response
+
 def handler(event, context):
 
     print(event)
@@ -36,7 +64,6 @@ def handler(event, context):
     print(f"Current attempt: {attempt}")
     print(f"Current slots: {slots}")
 
-    # Default response, let Lex take next action
     response = {
         'sessionstate': {
             'dialogAction': {
@@ -53,29 +80,12 @@ def handler(event, context):
 
         if not slots['MentalCapacity']:
 
-            message = topic_transition(
-                input_transcript="My name is " + transcript,
-                next_topic="mental capacity and ask if He/She have gone through a tragedy or hardtime within the last 3 months?"
+            response = prepare_topic_tranistion(
+                transcript="My name is " + transcript,
+                next_topic="mental capacity and if Have he/she gone through a tragedy within the last 3 months?, such as a breakup, Loss of loved one, Traumatic injury/accident",
+                slots=slots,
+                intent=intent                
             )
-
-            response =  {
-                    'sessionState': {
-                        'dialogAction': {
-                            'slotToElicit': 'MentalCapacity',
-                            'type': 'ElicitSlot'
-                        },
-                        'intent': {
-                            'name': intent,
-                            'slots': slots
-                        }
-                    },
-                    'messages': [
-                        {
-                            'contentType': 'PlainText',
-                            'content': message.replace('"', '')
-                        }
-                    ]
-                }
 
             if attempt != 'Initial':
                 answer = sentiment_analysis(
@@ -91,8 +101,6 @@ def handler(event, context):
 
                 if 'neutral' in answer.lower():
                     mental_capacity = 'neutral'
-                elif 'good' in answer.lower():
-                    mental_capacity = 'good'
                 else:
                     mental_capacity = 'bad'
 
@@ -127,60 +135,6 @@ def handler(event, context):
                         }
                     ]
                 }
-
-        elif not slots['EmotionalCapacity'] and attempt != 'Initial':
-
-            answer = sentiment_analysis(
-                    input_transcript=transcript,
-                    topic="emotional capacity",
-                    redflags=[
-                        "He/She is or seems to be burned out",
-                        "He/She is or seems to be exhausted",
-                        "He/She is or seems to be tired",
-                        "He/She can't take this anymore"
-                    ]             
-                )
-
-            print("Answer provided by sentiment analysis: "+answer)
-
-            if 'neutral' in answer.lower():
-                mental_capacity = 'neutral'
-            elif 'good' in answer.lower():
-                mental_capacity = 'good'
-            else:
-                mental_capacity = 'bad'
-
-            slots['EmotionalCapacity'] = {
-                'value': {
-                    "originalValue": transcript,
-                    "interpretedValue": mental_capacity,
-                    "resolvedValues": [mental_capacity]
-                }
-            }
-
-            message = topic_transition(
-                input_transcript=transcript,
-                next_topic="self-awareness and ask if He/She recognize His/Her flaws/tendencies/triggers and how that could impact someone's ability to trust me"
-            )
-
-            response =  {
-                'sessionState': {
-                    'dialogAction': {
-                        'slotToElicit': 'SelfAwareness',
-                        'type': 'ElicitSlot'
-                    },
-                    'intent': {
-                        'name': intent,
-                        'slots': slots
-                    }
-                },
-                'messages': [
-                    {
-                        'contentType': 'PlainText',
-                        'content': message.replace('"', '')
-                    }
-                ]
-            }
         
         else:
             response = {
