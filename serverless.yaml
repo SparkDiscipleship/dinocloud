@@ -80,13 +80,17 @@ resources:
     VettingQuestionsTable:
       Type: 'AWS::DynamoDB::Table'
       Properties:
-        TableName: VettingQuestionsChat
+        TableName: VettingQuestionsChatBot
         AttributeDefinitions:
-          - AttributeName: id
+          - AttributeName: chatId
+            AttributeType: S
+          - AttributeName: userId
             AttributeType: S
         KeySchema:
-          - AttributeName: id
+          - AttributeName: chatId
             KeyType: HASH
+          - AttributeName: userId
+            KeyType: RANGE
         ProvisionedThroughput:
           ReadCapacityUnits: 5
           WriteCapacityUnits: 5
