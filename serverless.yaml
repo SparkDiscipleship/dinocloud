@@ -76,3 +76,17 @@ resources:
         ManagedPolicyArns:
           - "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
           - "arn:aws:iam::aws:policy/AmazonBedrockFullAccess"
+
+    VettingQuestionsTable:
+      Type: 'AWS::DynamoDB::Table'
+      Properties:
+        TableName: VettingQuestionsChat
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 5
+          WriteCapacityUnits: 5
