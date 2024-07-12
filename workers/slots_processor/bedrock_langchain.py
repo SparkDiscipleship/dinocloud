@@ -35,6 +35,7 @@ def topic_transition(input_transcript: str, next_topic: str):
 
     return chat.invoke(messages).content
 
+
 def sentiment_analysis(input_transcript: str, topic:str, redflags: List[str]):
     """A custom sentiment analysis to detect potential redflags in a user response
     from a question about a topic.
@@ -68,6 +69,37 @@ def sentiment_analysis(input_transcript: str, topic:str, redflags: List[str]):
         HumanMessage(
             content=input_transcript
         )
+    ]
+
+    return chat.invoke(messages).content
+
+def topic_requestion(input_transcript: str, topic: str):
+    """A function that reformulates the question received in input transcript
+    related to the next topic.
+
+    input_transcript: this is the input transcript from the Amazon Lex event.
+    next_topic: this is the topic information about the next question to formulate.
+    """
+
+    chat = ChatBedrock(
+        model_id=model_id,
+        model_kwargs={ 
+            "max_tokens": 256,
+            "temperature": 0.5,
+            "top_k": 250,
+            "stop_sequences": ["\n\nHuman"],
+        })
+
+    messages = [
+        SystemMessage(
+            content=f"""You are a helpful chatbot. Reformulate the user's question \
+            related to the topic "{topic}". Do NOT start with a greeting. \
+            Ensure the reformulated question is clear, friendly, and enriched with \
+            relevant context."""
+        ),
+        HumanMessage(
+            content=input_transcript
+        ),
     ]
 
     return chat.invoke(messages).content

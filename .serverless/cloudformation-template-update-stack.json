@@ -81,7 +81,7 @@
       "Type": "AWS::Lambda::Function",
       "Properties": {
         "Code": {
-          "ImageUri": "214633882441.dkr.ecr.us-east-1.amazonaws.com/serverless-spark-mentor-chatbot-develop@sha256:379bb581e64b13c4dda6626b79bc212f9b6ed7c9ea4a8abce60c4b76283dab73"
+          "ImageUri": "214633882441.dkr.ecr.us-east-1.amazonaws.com/serverless-spark-mentor-chatbot-develop@sha256:20a8ca03c36aa9a9d402f7c82afb414cb5479480d918a818da152a566d4ba5fd"
         },
         "ImageConfig": {
           "Command": [
@@ -107,14 +107,14 @@
         "SparkMentorBotRole"
       ]
     },
-    "SparkChatbotSlotsProcessorLambdaVersioniqQpkEFf40trjTgZBdG7dz90tajSke3LtZPIvDmMq6M": {
+    "SparkChatbotSlotsProcessorLambdaVersionHJrDkj3dACnCEwTpsz1blSIcaU8Abt171zzWEH84": {
       "Type": "AWS::Lambda::Version",
       "DeletionPolicy": "Retain",
       "Properties": {
         "FunctionName": {
           "Ref": "SparkChatbotSlotsProcessorLambdaFunction"
         },
-        "CodeSha256": "379bb581e64b13c4dda6626b79bc212f9b6ed7c9ea4a8abce60c4b76283dab73"
+        "CodeSha256": "20a8ca03c36aa9a9d402f7c82afb414cb5479480d918a818da152a566d4ba5fd"
       }
     },
     "GeneralLambdaExecutionRole": {
@@ -191,7 +191,7 @@
     "SparkChatbotSlotsProcessorLambdaFunctionQualifiedArn": {
       "Description": "Current Lambda function version",
       "Value": {
-        "Ref": "SparkChatbotSlotsProcessorLambdaVersioniqQpkEFf40trjTgZBdG7dz90tajSke3LtZPIvDmMq6M"
+        "Ref": "SparkChatbotSlotsProcessorLambdaVersionHJrDkj3dACnCEwTpsz1blSIcaU8Abt171zzWEH84"
       },
       "Export": {
         "Name": "sls-spark-mentor-chatbot-develop-SparkChatbotSlotsProcessorLambdaFunctionQualifiedArn"
