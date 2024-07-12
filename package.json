@@ -1,0 +1,14 @@
+{
+  "scripts": {
+    "deploy": "python ./scripts/deploy.py",
+    "deploy:dev": "npm run deploy -- --stage dev",
+    "deploy:stg": "npm run deploy -- --stage stg",
+    "deploy:prod": "npm run deploy -- --stage prod"
+  },
+  "devDependencies": {
+    "serverless-cloudformation-sub-variables": "^0.2.1",
+    "serverless-offline": "^12.0.4",
+    "serverless-python-requirements": "^6.0.1",
+    "serverless-step-functions": "^3.17.0"
+  }
+}

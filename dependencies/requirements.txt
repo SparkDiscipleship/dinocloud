@@ -1,2 +1,0 @@
-langchain-core
-langchain-aws

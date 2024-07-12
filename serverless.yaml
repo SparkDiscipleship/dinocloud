@@ -1,0 +1,78 @@
+service: spark-mentor-chatbot
+
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  runtime: python3.11
+
+  ecr:
+    images:
+      spark_mentor_chatbot:
+        path: ./
+
+plugins:
+  - serverless-python-requirements
+  - serverless-cloudformation-sub-variables
+
+custom:
+  stage: ${opt:stage, 'dev'}
+
+functions:
+  SparkChatbotSlotsProcessor:
+    name: spark-chatbot-${self:custom.stage}-slots-processor
+    role: !GetAtt SparkMentorBotRole.Arn
+    memorySize: 128
+    timeout: 150
+    image:
+      name: spark_mentor_chatbot
+      command:
+        - "workers/slots_processor/lambda_function.handler"
+      entryPoint:
+        - '/lambda-entrypoint.sh'
+      
+package:
+  individually: true
+
+
+resources:
+  Resources:
+    GeneralLambdaExecutionRole:
+      Type: AWS::IAM::Role
+      Properties:
+        RoleName: SparkMentor-GeneralLambdaExecutionRole-${self:custom.stage}
+        AssumeRolePolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Principal:
+                Service: lambda.amazonaws.com
+              Action: sts:AssumeRole
+        Policies:
+          - PolicyName: CloudWatchLogsAccessPolicy3
+            PolicyDocument:
+              Version: '2012-10-17'
+              Statement:
+                - Effect: Allow
+                  Action:
+                    - logs:CreateLogGroup
+                    - logs:CreateLogStream
+                    - logs:PutLogEvents
+                    - logs:DescribeLogGroups
+                    - logs:DescribeLogStreams
+                  Resource: "*"
+
+    SparkMentorBotRole:
+      Type: AWS::IAM::Role
+      Properties:
+        RoleName: spark-chatbot-slots-processor-${self:custom.stage}
+        AssumeRolePolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Principal:
+                Service: lambda.amazonaws.com
+              Action: sts:AssumeRole
+        ManagedPolicyArns:
+          - "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+          - "arn:aws:iam::aws:policy/AmazonBedrockFullAccess"

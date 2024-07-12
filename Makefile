@@ -2,7 +2,7 @@
 
 build:
 	@echo "Compressing Lambda Function Python Code."
-	mkdir -p build/layer/python && python -m pip install --platform manylinux2014_aarch64 -r requirements.txt -t build/layer/python && zip -r build/lambda-layer.zip build/layer
+	mkdir -p build/layer/python && python -m pip install -r requirements.txt -t build/layer/python && zip -r build/lambda-layer.zip build/layer
 
 deploy:
 	@echo "Deploying the cost-savings-automation lambda function"
