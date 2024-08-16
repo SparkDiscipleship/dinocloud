@@ -1,5 +1,12 @@
-from .bedrock_langchain import topic_transition, sentiment_analysis, topic_requestion
+from .bedrock_langchain import topic_transition, sentiment_analysis, topic_requestion, end_conversation, start_conversation
 import json
+import boto3
+import os
+import time
+
+dynamodb = boto3.resource('dynamodb')
+vettings_questions_history_table = dynamodb.Table('VettingQuestionsHistory')
+vettings_questions_status_table = dynamodb.Table('VettingQuestionsStatus')
 
 topics = [
     {
@@ -40,6 +47,15 @@ topics = [
     }
 ]
 
+initial_topics = {
+    "MentalCapacity": None,
+    "EmotionalCapacity": None,
+    "SelfAwareness": None,
+    "SpiritualMaturity": None,
+    "HealthyRelationships": None,
+    "GodWordKnowledge": None
+}
+
 elicitslot_response =  {
     'sessionState': {
         'dialogAction': {
@@ -75,10 +91,11 @@ def get_current_topic(category):
     return None
 
 def prepare_topic_tranistion(transcript: str, category: str, next_topic: str, intent, slots):
-
     message = topic_transition(
-        input_transcript=transcript,
-        next_topic=f"{category} and if {next_topic}"
+        input_transcript= transcript,
+        next_topic=f"{category} and if {next_topic}",
+        is_first=True,
+        name=transcript
     )
 
     response =  {
@@ -105,26 +122,84 @@ def prepare_topic_tranistion(transcript: str, category: str, next_topic: str, in
 
     return response
 
+def save_message_to_dynamodb(userId, senderType, message):
+    item = {
+        'userId': userId,
+        'timestamp': int(time.time()),
+        'senderType': senderType,
+        'content': message
+    }
+
+    try:
+        vettings_questions_history_table.put_item(Item=item)
+    except Exception as err:
+        print(f"There was an error")    
+        print(json.dumps(err))
 
 
+def save_status_to_dynamodb(userId, status, session):
+    item = {
+        'userId': userId,
+        'status': status,
+        'session': session,
+    }
+
+    try:
+        vettings_questions_status_table.put_item(Item=item)
+    except Exception as err:
+        print(f"There was an error")    
+        print(json.dumps(err))
+
+def is_good_profile(topics_data):
+    for topic in topics:
+        if topics_data[topic["slotName"]] != 'good':
+            return False
+    return True
+
+def send_initial_message(transcript, slots, intent):
+    message = start_conversation(transcript)
+
+    response = { 
+        'sessionState': {
+            'dialogAction': {
+                'slotToElicit': "FirstName",
+                'type': 'ElicitSlot'
+            },
+            'intent': {
+                'name':intent,
+                'slots': slots
+            }                        
+        },
+        'messages': [
+            {
+                'contentType': 'PlainText',
+                'content': message.replace('"', '')
+            }
+        ]
+    }
+
+    return response
+
+def get_user_session(user_id):
+    try:
+        response = vettings_questions_status_table.get_item(Key={'userId': user_id})
+        return response.get('Item')
+    except Exception as e:
+        print(f"Error fetching user session: {e}")
+        return None
+    
 def handler(event, context):
-
     transcript = event['inputTranscript']
+    
+    userId = event['userId'] if 'userId' in event else os.environ.get('USER_ID', '1')
+    status = 'inProgress'
     slots = event['sessionState']['intent']['slots']
     intent = event['sessionState']['intent']['name']
     currentCategory = event['sessionState']['sessionAttributes']['currentCategory'] if 'currentCategory' in event['sessionState']['sessionAttributes'] else None
-    try:
-        attempt = event['proposedNextState']['prompt']['attempt']
-    except KeyError:
-        attempt = 'Initial'
-        pass
-
-    print(f"The user message is: {transcript}")
-    print(f"Current attempt: {attempt}")
-    print(f"Current slots: {slots}")
+    session_attributes = event['sessionState'].get('sessionAttributes', {})
 
     response = {
-        'sessionstate': {
+        'sessionState': {
             'dialogAction': {
                 'type': 'Delegate'
             },
@@ -135,21 +210,79 @@ def handler(event, context):
         }
     }
 
-    if event['invocationSource'] == 'DialogCodeHook':
+
+    firstMessage = False
+
+    save_message_to_dynamodb(userId, 'user', event['inputTranscript'])
+
+    try:
+        attempt = event['proposedNextState']['prompt']['attempt']
+    except KeyError:
+        attempt = 'Initial'
+        pass
+
+    if 'invocationLabel' in event and event['invocationLabel'] == 'initialMessage': 
+        user_session = get_user_session(userId)
+        print(f"user_session: {json.dumps(user_session)}")
+        print(f"user id: {userId}")
+        
+        if not user_session:
+            print(f'No exists user session')
+            response = send_initial_message(transcript, slots, intent)
+            firstMessage = True
+        else:
+            event = user_session['session']
+            print(f"Current event by load session: {json.dumps(event)}")
+
+    if not firstMessage:
+        slots = event['sessionState']['intent']['slots']
+        intent = event['sessionState']['intent']['name']
+        currentCategory = event['sessionState']['sessionAttributes']['currentCategory'] if 'sessionAttributes' in event['sessionState'] and 'currentCategory' in event['sessionState']['sessionAttributes'] else None
+        session_attributes = event['sessionState'].get('sessionAttributes', {})
+
+        print(f"The user message is: {transcript}")
+        print(f"Current attempt: {attempt}")
+        print(f"Current slots: {slots}")
+        print(f"Current event: {json.dumps(event)}")
+
+
+        response = {
+            'sessionState': {
+                'dialogAction': {
+                    'type': 'Delegate'
+                },
+                'intent': {
+                    'name': intent,
+                    'slots': slots
+                }
+            }
+        }
+
+        print('has to ask for some topic')
         current_topic = get_current_topic(currentCategory)
         print(f"current_topic: {json.dumps(current_topic)}")
         
         if not current_topic:
+            print('first topic')
+
             first_topic = topics[0]
             response = prepare_topic_tranistion(
-                transcript="My name is " + transcript,
+                transcript=transcript,
                 category=first_topic["category"],
                 next_topic=first_topic["description"],
                 slots=slots,
                 intent=intent                
             )
+            response['sessionState']['sessionAttributes'] =  {**initial_topics, 'currentCategory': first_topic['category'], 'currentRetries': str(0)} 
+
+
+
         else:
+            print('other topic than first')
             next_topic_element = get_next_topic(currentCategory)
+            print(f"next topic element: {json.dumps(next_topic_element)}")
+            print(f"topic: {json.dumps(current_topic)} ")
+            print(f"transcript: {transcript} ")
 
             answer = sentiment_analysis(
                     input_transcript=transcript,
@@ -157,12 +290,12 @@ def handler(event, context):
                     redflags=current_topic["redflags"]                  
                 )
 
-            print("Answer provided by sentiment analysis: "+ answer)
+            print(f"answer: {answer}")
+            current_retries =  int(session_attributes['currentRetries'] if 'currentRetries' in session_attributes else '0')
 
-            response_status = ''
-
-            if 'neutral' in answer.lower():
+            if 'neutral' in answer.lower() and current_retries < 2:
                 response_status = 'neutral'
+            
                 message = topic_requestion(transcript, topic=f"{current_topic['category']} and if {current_topic['description']}")
 
                 response =  { 
@@ -176,8 +309,10 @@ def handler(event, context):
                                 'slots': slots
                             },
                             'sessionAttributes': {
+                                **session_attributes, 
                                 'currentCategory': current_topic['category'],
-                            }
+                                'currentRetries': str(current_retries + 1)
+                                },                        
                         },
                         'messages': [
                             {
@@ -189,9 +324,11 @@ def handler(event, context):
             else:            
                 if 'good' in answer.lower():
                     response_status = 'good'
+                elif 'neutral' in answer.lower():
+                    response_status = 'neutral'
                 else:
                     response_status = 'bad'
-                print(json.dumps(slots))
+
                 slots[current_topic['slotName']] = {
                     'value': {
                         "originalValue": transcript,
@@ -199,7 +336,8 @@ def handler(event, context):
                         "resolvedValues": [response_status]
                     }
                 }
-                print(json.dumps(slots))    
+
+                session_attributes[current_topic['slotName']] = response_status
                 
                 if next_topic_element:                
                     
@@ -218,9 +356,7 @@ def handler(event, context):
                                 'name': intent,
                                 'slots': slots
                             },
-                            'sessionAttributes': {
-                                'currentCategory': next_topic_element['category'],
-                            }
+                            'sessionAttributes': {**session_attributes, 'currentCategory': next_topic_element['category'], 'currentRetries': str(0)},
                         },
                         'messages': [
                             {
@@ -230,8 +366,8 @@ def handler(event, context):
                         ]
                     }
                 else:
-                    
-
+                    name = slots.get('FirstName', {}).get('value', {}).get('interpretedValue', 'User')
+                    message = end_conversation(transcript, name)
                     response = {
                         "sessionState": {
                             "dialogAction": {
@@ -241,29 +377,21 @@ def handler(event, context):
                                 "name": "VettingQuestions",
                                 "state": "Fulfilled",
                                 'slots': slots,
-                            }
+                            },
+                            'sessionAttributes': session_attributes,
                         },
                         'messages': [
                             {
                                 'contentType': 'PlainText',
-                                'content': "¡Thanks you for your response!"
+                                'content': message
                             }
                         ]
                     }
-            
-    else:
-        response = {
-            "sessionState": {
-                "dialogAction": {
-                    "type": "Close"
-                },
-                "intent": {
-                    "name": "VettingQuestions",
-                    "state": "Fulfilled"
-                }
-            }
-        }
+                    status = 'goodProfile' if is_good_profile(session_attributes) else 'rottenApple'
+        save_message_to_dynamodb(userId, 'lex', response['messages'][0]['content'])
 
-    print(f"response: {response}")
+    print(f'finish with response: {json.dumps(response)}')
+
+    save_status_to_dynamodb(userId, status, response)
     return response
 

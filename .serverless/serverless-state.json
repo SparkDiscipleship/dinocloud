@@ -93,14 +93,14 @@
           "SparkChatbotSlotsProcessorLogGroup": {
             "Type": "AWS::Logs::LogGroup",
             "Properties": {
-              "LogGroupName": "/aws/lambda/spark-chatbot-develop-slots-processor"
+              "LogGroupName": "/aws/lambda/spark-chatbot-dev-slots-processor"
             }
           },
           "SparkChatbotSlotsProcessorLambdaFunction": {
             "Type": "AWS::Lambda::Function",
             "Properties": {
               "Code": {
-                "ImageUri": "214633882441.dkr.ecr.us-east-1.amazonaws.com/serverless-spark-mentor-chatbot-develop@sha256:20a8ca03c36aa9a9d402f7c82afb414cb5479480d918a818da152a566d4ba5fd"
+                "ImageUri": "214633882441.dkr.ecr.us-east-1.amazonaws.com/serverless-spark-mentor-chatbot-dev@sha256:b270be58d59644676ccefee03fc8820057c9c5f9958aa4bce8f9368eb50d3924"
               },
               "ImageConfig": {
                 "Command": [
@@ -111,7 +111,7 @@
                 ]
               },
               "PackageType": "Image",
-              "FunctionName": "spark-chatbot-develop-slots-processor",
+              "FunctionName": "spark-chatbot-dev-slots-processor",
               "MemorySize": 128,
               "Timeout": 150,
               "Role": {
@@ -126,20 +126,20 @@
               "SparkMentorBotRole"
             ]
           },
-          "SparkChatbotSlotsProcessorLambdaVersionHJrDkj3dACnCEwTpsz1blSIcaU8Abt171zzWEH84": {
+          "SparkChatbotSlotsProcessorLambdaVersioneeXnOCrr9Aw6wkw7FPvdYdq7ohFHroGGimejcEHG8": {
             "Type": "AWS::Lambda::Version",
             "DeletionPolicy": "Retain",
             "Properties": {
               "FunctionName": {
                 "Ref": "SparkChatbotSlotsProcessorLambdaFunction"
               },
-              "CodeSha256": "20a8ca03c36aa9a9d402f7c82afb414cb5479480d918a818da152a566d4ba5fd"
+              "CodeSha256": "b270be58d59644676ccefee03fc8820057c9c5f9958aa4bce8f9368eb50d3924"
             }
           },
           "GeneralLambdaExecutionRole": {
             "Type": "AWS::IAM::Role",
             "Properties": {
-              "RoleName": "SparkMentor-GeneralLambdaExecutionRole-develop",
+              "RoleName": "SparkMentor-GeneralLambdaExecutionRole-dev",
               "AssumeRolePolicyDocument": {
                 "Version": "2012-10-17",
                 "Statement": [
@@ -178,7 +178,7 @@
           "SparkMentorBotRole": {
             "Type": "AWS::IAM::Role",
             "Properties": {
-              "RoleName": "spark-chatbot-slots-processor-develop",
+              "RoleName": "spark-chatbot-slots-processor-dev",
               "AssumeRolePolicyDocument": {
                 "Version": "2012-10-17",
                 "Statement": [
@@ -194,7 +194,77 @@
               "ManagedPolicyArns": [
                 "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole",
                 "arn:aws:iam::aws:policy/AmazonBedrockFullAccess"
+              ],
+              "Policies": [
+                {
+                  "PolicyName": "DynamoDBAccessPolicy",
+                  "PolicyDocument": {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                      {
+                        "Effect": "Allow",
+                        "Action": [
+                          "dynamodb:PutItem",
+                          "dynamodb:GetItem"
+                        ],
+                        "Resource": "arn:aws:dynamodb:us-east-1:214633882441:table/VettingQuestions*"
+                      }
+                    ]
+                  }
+                }
               ]
+            }
+          },
+          "VettingQuestionsHistoryTable": {
+            "Type": "AWS::DynamoDB::Table",
+            "Properties": {
+              "TableName": "VettingQuestionsHistory",
+              "AttributeDefinitions": [
+                {
+                  "AttributeName": "userId",
+                  "AttributeType": "S"
+                },
+                {
+                  "AttributeName": "timestamp",
+                  "AttributeType": "N"
+                }
+              ],
+              "KeySchema": [
+                {
+                  "AttributeName": "userId",
+                  "KeyType": "HASH"
+                },
+                {
+                  "AttributeName": "timestamp",
+                  "KeyType": "RANGE"
+                }
+              ],
+              "ProvisionedThroughput": {
+                "ReadCapacityUnits": 5,
+                "WriteCapacityUnits": 5
+              }
+            }
+          },
+          "VettingQuestionStatusTable": {
+            "Type": "AWS::DynamoDB::Table",
+            "Properties": {
+              "TableName": "VettingQuestionsStatus",
+              "AttributeDefinitions": [
+                {
+                  "AttributeName": "userId",
+                  "AttributeType": "S"
+                }
+              ],
+              "KeySchema": [
+                {
+                  "AttributeName": "userId",
+                  "KeyType": "HASH"
+                }
+              ],
+              "ProvisionedThroughput": {
+                "ReadCapacityUnits": 5,
+                "WriteCapacityUnits": 5
+              }
             }
           }
         },
@@ -204,16 +274,16 @@
               "Ref": "ServerlessDeploymentBucket"
             },
             "Export": {
-              "Name": "sls-spark-mentor-chatbot-develop-ServerlessDeploymentBucketName"
+              "Name": "sls-spark-mentor-chatbot-dev-ServerlessDeploymentBucketName"
             }
           },
           "SparkChatbotSlotsProcessorLambdaFunctionQualifiedArn": {
             "Description": "Current Lambda function version",
             "Value": {
-              "Ref": "SparkChatbotSlotsProcessorLambdaVersionHJrDkj3dACnCEwTpsz1blSIcaU8Abt171zzWEH84"
+              "Ref": "SparkChatbotSlotsProcessorLambdaVersioneeXnOCrr9Aw6wkw7FPvdYdq7ohFHroGGimejcEHG8"
             },
             "Export": {
-              "Name": "sls-spark-mentor-chatbot-develop-SparkChatbotSlotsProcessorLambdaFunctionQualifiedArn"
+              "Name": "sls-spark-mentor-chatbot-dev-SparkChatbotSlotsProcessorLambdaFunctionQualifiedArn"
             }
           }
         }
@@ -303,7 +373,7 @@
       "vpc": {}
     },
     "custom": {
-      "stage": "develop"
+      "stage": "dev"
     },
     "plugins": [
       "serverless-python-requirements",
@@ -312,7 +382,7 @@
     "pluginsData": {},
     "functions": {
       "SparkChatbotSlotsProcessor": {
-        "name": "spark-chatbot-develop-slots-processor",
+        "name": "spark-chatbot-dev-slots-processor",
         "role": {
           "$ref": "$[\"service\"][\"provider\"][\"compiledCloudFormationTemplate\"][\"Resources\"][\"SparkChatbotSlotsProcessorLambdaFunction\"][\"Properties\"][\"Role\"]"
         },
@@ -331,7 +401,7 @@
         "package": {},
         "memory": 128,
         "vpc": {},
-        "versionLogicalId": "SparkChatbotSlotsProcessorLambdaVersionHJrDkj3dACnCEwTpsz1blSIcaU8Abt171zzWEH84"
+        "versionLogicalId": "SparkChatbotSlotsProcessorLambdaVersioneeXnOCrr9Aw6wkw7FPvdYdq7ohFHroGGimejcEHG8"
       }
     },
     "resources": {
@@ -339,7 +409,7 @@
         "GeneralLambdaExecutionRole": {
           "Type": "AWS::IAM::Role",
           "Properties": {
-            "RoleName": "SparkMentor-GeneralLambdaExecutionRole-develop",
+            "RoleName": "SparkMentor-GeneralLambdaExecutionRole-dev",
             "AssumeRolePolicyDocument": {
               "Version": "2012-10-17",
               "Statement": [
@@ -378,7 +448,7 @@
         "SparkMentorBotRole": {
           "Type": "AWS::IAM::Role",
           "Properties": {
-            "RoleName": "spark-chatbot-slots-processor-develop",
+            "RoleName": "spark-chatbot-slots-processor-dev",
             "AssumeRolePolicyDocument": {
               "Version": "2012-10-17",
               "Statement": [
@@ -394,7 +464,77 @@
             "ManagedPolicyArns": [
               "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole",
               "arn:aws:iam::aws:policy/AmazonBedrockFullAccess"
+            ],
+            "Policies": [
+              {
+                "PolicyName": "DynamoDBAccessPolicy",
+                "PolicyDocument": {
+                  "Version": "2012-10-17",
+                  "Statement": [
+                    {
+                      "Effect": "Allow",
+                      "Action": [
+                        "dynamodb:PutItem",
+                        "dynamodb:GetItem"
+                      ],
+                      "Resource": "arn:aws:dynamodb:us-east-1:214633882441:table/VettingQuestions*"
+                    }
+                  ]
+                }
+              }
             ]
+          }
+        },
+        "VettingQuestionsHistoryTable": {
+          "Type": "AWS::DynamoDB::Table",
+          "Properties": {
+            "TableName": "VettingQuestionsHistory",
+            "AttributeDefinitions": [
+              {
+                "AttributeName": "userId",
+                "AttributeType": "S"
+              },
+              {
+                "AttributeName": "timestamp",
+                "AttributeType": "N"
+              }
+            ],
+            "KeySchema": [
+              {
+                "AttributeName": "userId",
+                "KeyType": "HASH"
+              },
+              {
+                "AttributeName": "timestamp",
+                "KeyType": "RANGE"
+              }
+            ],
+            "ProvisionedThroughput": {
+              "ReadCapacityUnits": 5,
+              "WriteCapacityUnits": 5
+            }
+          }
+        },
+        "VettingQuestionStatusTable": {
+          "Type": "AWS::DynamoDB::Table",
+          "Properties": {
+            "TableName": "VettingQuestionsStatus",
+            "AttributeDefinitions": [
+              {
+                "AttributeName": "userId",
+                "AttributeType": "S"
+              }
+            ],
+            "KeySchema": [
+              {
+                "AttributeName": "userId",
+                "KeyType": "HASH"
+              }
+            ],
+            "ProvisionedThroughput": {
+              "ReadCapacityUnits": 5,
+              "WriteCapacityUnits": 5
+            }
           }
         }
       },
@@ -419,8 +559,8 @@
       },
       "package": {
         "individually": true,
-        "artifactsS3KeyDirname": "serverless/spark-mentor-chatbot/develop/code-artifacts",
-        "artifactDirectoryName": "serverless/spark-mentor-chatbot/develop/1720803465192-2024-07-12T16:57:45.192Z"
+        "artifactsS3KeyDirname": "serverless/spark-mentor-chatbot/dev/code-artifacts",
+        "artifactDirectoryName": "serverless/spark-mentor-chatbot/dev/1722975670099-2024-08-06T20:21:10.099Z"
       },
       "resources": {
         "$ref": "$[\"service\"][\"resources\"]"
@@ -431,7 +571,7 @@
   },
   "package": {
     "individually": true,
-    "artifactDirectoryName": "serverless/spark-mentor-chatbot/develop/1720803465192-2024-07-12T16:57:45.192Z",
+    "artifactDirectoryName": "serverless/spark-mentor-chatbot/dev/1722975670099-2024-08-06T20:21:10.099Z",
     "artifact": ""
   }
 }

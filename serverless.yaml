@@ -76,21 +76,44 @@ resources:
         ManagedPolicyArns:
           - "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
           - "arn:aws:iam::aws:policy/AmazonBedrockFullAccess"
-
-    VettingQuestionsTable:
+        Policies:
+          - PolicyName: DynamoDBAccessPolicy
+            PolicyDocument:
+              Version: "2012-10-17"
+              Statement:
+                - Effect: Allow
+                  Action:
+                    - dynamodb:PutItem
+                    - dynamodb:GetItem
+                  Resource: arn:aws:dynamodb:us-east-1:214633882441:table/VettingQuestions*
+    VettingQuestionsHistoryTable:
       Type: 'AWS::DynamoDB::Table'
       Properties:
-        TableName: VettingQuestionsChatBot
+        TableName: VettingQuestionsHistory
         AttributeDefinitions:
-          - AttributeName: chatId
+          - AttributeName: userId
             AttributeType: S
+          - AttributeName: timestamp
+            AttributeType: N
+        KeySchema:
+          - AttributeName: userId
+            KeyType: HASH
+          - AttributeName: timestamp
+            KeyType: RANGE
+        ProvisionedThroughput:
+          ReadCapacityUnits: 5
+          WriteCapacityUnits: 5
+
+    VettingQuestionStatusTable:
+      Type: 'AWS::DynamoDB::Table'
+      Properties:
+        TableName: VettingQuestionsStatus
+        AttributeDefinitions:
           - AttributeName: userId
             AttributeType: S
         KeySchema:
-          - AttributeName: chatId
-            KeyType: HASH
           - AttributeName: userId
-            KeyType: RANGE
+            KeyType: HASH
         ProvisionedThroughput:
           ReadCapacityUnits: 5
           WriteCapacityUnits: 5
